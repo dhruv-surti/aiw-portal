@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Wrangler | Classroom Access</title>
+<title>AI Wrangler | Classroom Wi-Fi</title>
 <style>
   :root {
     --bg: #0f1115;
@@ -32,86 +32,58 @@
     text-align: center;
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
   }
-  h1 {
-    font-size: 20px;
-    margin: 0 0 8px;
-  }
-  p {
-    color: var(--muted);
-    font-size: 14px;
-    margin: 0 0 28px;
-  }
-  .signin-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  p { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+  .connect-btn {
+    display: block;
     width: 100%;
-    padding: 12px 16px;
+    padding: 14px 16px;
     background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    text-decoration: none;
   }
-  .signin-btn:hover { opacity: 0.92; }
-  .status {
-    margin-top: 18px;
-    font-size: 13px;
-    color: var(--muted);
-    min-height: 18px;
-  }
-  footer {
-    margin-top: 24px;
-    font-size: 11px;
-    color: #55595f;
-  }
+  .connect-btn:hover { opacity: 0.92; }
+  .connect-btn:disabled { opacity: 0.6; cursor: default; }
+  .status { margin-top: 18px; font-size: 13px; color: var(--muted); min-height: 18px; }
+  footer { margin-top: 24px; font-size: 11px; color: #55595f; }
 </style>
 </head>
 <body>
   <div class="card">
     <h1>AI Wrangler Classroom Wi-Fi</h1>
-    <p>Sign in with your TAFE Microsoft account to connect and mark your attendance.</p>
-    <a id="signinBtn" class="signin-btn" href="#">Sign in with Microsoft</a>
+    <p>Tap connect to join the classroom network.</p>
+    <button id="connectBtn" class="connect-btn">Connect</button>
     <div class="status" id="status"></div>
     <footer>Natural Velocity &middot; AI Wrangler</footer>
   </div>
 
   <script>
-    // ---- CONFIG: fill these in once you've registered the app in Entra ID
-    // and deployed the Cloudflare Worker (steps 3-4 of the guide).
-    const CLIENT_ID = "YOUR_ENTRA_APP_CLIENT_ID";
-    const TENANT_ID = "YOUR_ENTRA_TENANT_ID";
-    const REDIRECT_URI = "https://YOUR-WORKER-SUBDOMAIN.workers.dev/callback";
-
-    // Capture the AP MAC / client MAC UniFi passes in the query string
-    // (UniFi's guest portal appends params like ap, id, t, url, ssid).
+    // UniFi's guest portal redirects here with query params identifying
+    // the client and the original destination it was trying to reach.
+    // Typical params: id (client MAC), ap (AP MAC), ssid, t (timestamp),
+    // url (original requested URL).
     const params = new URLSearchParams(window.location.search);
-    const clientMac = params.get("id") || "";
-    const apMac = params.get("ap") || "";
-    const originalUrl = params.get("url") || "";
 
-    function buildAuthUrl() {
-      const base = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize`;
-      const state = encodeURIComponent(JSON.stringify({ clientMac, apMac, originalUrl }));
-      const query = new URLSearchParams({
-        client_id: CLIENT_ID,
-        response_type: "code",
-        redirect_uri: REDIRECT_URI,
-        response_mode: "query",
-        scope: "openid profile email User.Read",
-        state: state
-      });
-      return `${base}?${query.toString()}`;
-    }
+    const status = document.getElementById("status");
+    const btn = document.getElementById("connectBtn");
 
-    document.getElementById("signinBtn").addEventListener("click", function (e) {
-      e.preventDefault();
-      document.getElementById("status").textContent = "Redirecting to Microsoft sign-in...";
-      window.location.href = buildAuthUrl();
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      status.textContent = "Connecting...";
+
+      // Send the client back to their originally requested URL (or a
+      // default) once authorized. On a stock UniFi click-through guest
+      // portal, redirecting back through the controller's authorize
+      // link releases the client; no server-side call needed.
+      const originalUrl = params.get("url") || "https://www.google.com";
+
+      setTimeout(function () {
+        window.location.href = originalUrl;
+      }, 600);
     });
   </script>
 </body>
